@@ -1,3 +1,4 @@
 streamlit
 pandas
 email-validator  # (This helps with email handling, but smtplib is NOT needed)
+streamlit-drawable-canvas
