@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
-import os
 import hashlib
 from datetime import datetime
+from streamlit_drawable_canvas import st_canvas
 
 # Load MyScript API Key from Streamlit Secrets
 MYSCRIPT_API_KEY = st.secrets["MYSCRIPT_API_KEY"]
@@ -45,81 +45,45 @@ if student_id:
         st.success("✅ ID Verified! You can now write your math expression.")
         log_usage(student_id)
 
-        # JavaScript-based handwriting canvas (Fixed with Escaped Braces)
-        st.markdown(
-            """
-            <canvas id="canvas" width="500" height="200" style="border:1px solid black;"></canvas>
-            <br>
-            <button onclick="clearCanvas()" style="padding: 8px 12px;">🗑 Clear</button>
-            <button onclick="convertToLatex()" style="padding: 8px 12px;">📄 Convert to LaTeX</button>
-            <br><br>
-            <input type="text" id="latexOutput" readonly style="width: 100%; padding: 5px; font-size: 16px;">
-            <br>
-            <button onclick="copyLatex()" style="padding: 8px 12px;">📋 Copy LaTeX</button>
+        # **✅ Working Drawing Canvas**
+        st.write("📝 Draw your math expression below:")
 
-            <script>
-                let canvas = document.getElementById("canvas");
-                let ctx = canvas.getContext("2d");
-                let drawing = false;
-                let strokes = [];
-
-                canvas.addEventListener("mousedown", (e) => {{
-                    drawing = true;
-                    strokes.push([]);
-                }});
-
-                canvas.addEventListener("mousemove", (e) => {{
-                    if (!drawing) return;
-                    let x = e.offsetX;
-                    let y = e.offsetY;
-                    ctx.lineTo(x, y);
-                    ctx.stroke();
-                    strokes[strokes.length - 1].push({{x, y}});
-                }});
-
-                canvas.addEventListener("mouseup", () => {{ drawing = false; }});
-
-                function clearCanvas() {{
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.beginPath();
-                    strokes = [];
-                }}
-
-                function convertToLatex() {{
-                    let requestData = {{
-                        "applicationKey": "{api_key}",
-                        "strokes": strokes
-                    }};
-
-                    fetch("https://cloud.myscript.com/api/v4.0/iink/batch", {{
-                        method: "POST",
-                        headers: {{ "Content-Type": "application/json" }},
-                        body: JSON.stringify(requestData)
-                    }})
-                    .then(response => response.json())
-                    .then(data => {{
-                        if (data["results"] && data["results"].length > 0) {{
-                            let latex = data["results"][0]["latex"];
-                            document.getElementById("latexOutput").value = latex;
-                        }} else {{
-                            alert("❌ Conversion failed. Try again.");
-                        }}
-                    }})
-                    .catch(error => alert("Error converting: " + error));
-                }}
-
-                function copyLatex() {{
-                    let latexField = document.getElementById("latexOutput");
-                    latexField.select();
-                    document.execCommand("copy");
-                    alert("✅ LaTeX copied to clipboard!");
-                }}
-            </script>
-            """.format(api_key=MYSCRIPT_API_KEY),
-            unsafe_allow_html=True
+        canvas_result = st_canvas(
+            fill_color="rgba(255, 165, 0, 0.3)",  # Transparent fill
+            stroke_width=3,
+            stroke_color="#000000",
+            background_color="#FFFFFF",
+            height=200,
+            width=500,
+            drawing_mode="freedraw",
+            key="canvas"
         )
 
-        # LaTeX Input Box (for manually entered LaTeX)
+        if st.button("Convert to LaTeX"):
+            if canvas_result.image_data is not None:
+                # **Process strokes & send to MyScript API**
+                strokes_data = {
+                    "applicationKey": MYSCRIPT_API_KEY,
+                    "strokes": canvas_result.json_data["objects"]  # Extract strokes
+                }
+                
+                response = requests.post(
+                    "https://cloud.myscript.com/api/v4.0/iink/batch",
+                    headers={"Content-Type": "application/json"},
+                    json=strokes_data
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    if "results" in result and len(result["results"]) > 0:
+                        latex_output = result["results"][0]["latex"]
+                        st.text_input("Converted LaTeX Output:", value=latex_output, key="latex_output")
+                    else:
+                        st.error("⚠ Conversion failed. Try again!")
+                else:
+                    st.error(f"❌ API Error: {response.status_code}")
+
+        # **✅ Single Copy Button**
         latex_string = st.text_area("Or manually enter LaTeX:", "")
 
         if st.button("Copy LaTeX with Checksum"):
