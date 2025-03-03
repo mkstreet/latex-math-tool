@@ -1,19 +1,12 @@
 import streamlit as st
 import pandas as pd
-import smtplib
-from email.message import EmailMessage
 import os
 from datetime import datetime
-
-# Load secrets from Streamlit
-EMAIL_SENDER = st.secrets["EMAIL_SENDER"]
-EMAIL_PASSWORD = st.secrets["EMAIL_PASSWORD"]
-EMAIL_RECEIVER = st.secrets["EMAIL_RECEIVER"]
 
 # CSV file for logging usage
 log_file = "usage_log.csv"
 
-# Function to log student usage (remains, but no buttons shown)
+# Function to log student usage
 def log_usage(student_id):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -28,7 +21,7 @@ def log_usage(student_id):
 
     df.to_csv(log_file, index=False)
 
-# Streamlit App UI (NO ADMIN BUTTONS)
+# Streamlit App UI
 st.title("📝 Handwriting-to-LaTeX Math Tool")
 
 # Student ID Authentication
@@ -44,11 +37,25 @@ if student_id:
         # MyScript Handwriting Input
         st.write("✍ Write your math expression below:")
         st.markdown(
-            '<iframe src="https://webdemo.myscript.com/views/math/index.html" width="100%" height="400"></iframe>',
+            '''
+            <iframe src="https://webdemo.myscript.com/views/math/index.html" width="100%" height="400"></iframe>
+            <br>
+            <input type="text" id="latexOutput" readonly style="width: 100%; padding: 5px; font-size: 16px;">
+            <br>
+            <button onclick="copyLatex()" style="padding: 8px 12px; font-size: 16px;">📋 Copy LaTeX</button>
+            <script>
+                function copyLatex() {
+                    var latexField = document.getElementById("latexOutput");
+                    latexField.select();
+                    document.execCommand("copy");
+                    alert("LaTeX copied to clipboard!");
+                }
+            </script>
+            ''',
             unsafe_allow_html=True
         )
 
-        # LaTeX Input Box
+        # LaTeX Input Box (for manual input)
         latex_string = st.text_area("Or manually enter LaTeX:", "")
 
         if st.button("Copy LaTeX"):
