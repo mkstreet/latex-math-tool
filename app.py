@@ -45,13 +45,9 @@ if student_id:
         st.success("✅ ID Verified! You can now write your math expression.")
         log_usage(student_id)
 
-        # Pass API Key Securely to JavaScript
-        st.write(f"<script>const MYSCRIPT_API_KEY = '{MYSCRIPT_API_KEY}';</script>", unsafe_allow_html=True)
-
-        # JavaScript-based handwriting canvas
-        st.write("📝 Draw your math expression below:")
+        # JavaScript-based handwriting canvas (Fixed)
         st.markdown(
-            """
+            f"""
             <canvas id="canvas" width="500" height="200" style="border:1px solid black;"></canvas>
             <br>
             <button onclick="clearCanvas()" style="padding: 8px 12px;">🗑 Clear</button>
@@ -67,24 +63,31 @@ if student_id:
                 let drawing = false;
                 let strokes = [];
 
-                canvas.addEventListener("mousedown", () => { drawing = true; strokes.push([]); });
-                canvas.addEventListener("mouseup", () => { drawing = false; });
+                canvas.addEventListener("mousedown", (e) => {
+                    drawing = true;
+                    strokes.push([]);
+                });
+
                 canvas.addEventListener("mousemove", (e) => {
                     if (!drawing) return;
                     let x = e.offsetX;
                     let y = e.offsetY;
-                    ctx.fillRect(x, y, 2, 2);
-                    strokes[strokes.length - 1].push({ x, y });
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                    strokes[strokes.length - 1].push({x, y});
                 });
+
+                canvas.addEventListener("mouseup", () => { drawing = false; });
 
                 function clearCanvas() {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.beginPath();
                     strokes = [];
                 }
 
                 function convertToLatex() {
                     let requestData = {
-                        "applicationKey": MYSCRIPT_API_KEY,
+                        "applicationKey": "{MYSCRIPT_API_KEY}",
                         "strokes": strokes
                     };
 
@@ -95,8 +98,12 @@ if student_id:
                     })
                     .then(response => response.json())
                     .then(data => {
-                        let latex = data["results"][0]["latex"];
-                        document.getElementById("latexOutput").value = latex;
+                        if (data["results"] && data["results"].length > 0) {
+                            let latex = data["results"][0]["latex"];
+                            document.getElementById("latexOutput").value = latex;
+                        } else {
+                            alert("❌ Conversion failed. Try again.");
+                        }
                     })
                     .catch(error => alert("Error converting: " + error));
                 }
