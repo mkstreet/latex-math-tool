@@ -45,6 +45,9 @@ if student_id:
         st.success("✅ ID Verified! You can now write your math expression.")
         log_usage(student_id)
 
+        # Pass API Key Securely to JavaScript
+        st.write(f"<script>const MYSCRIPT_API_KEY = '{MYSCRIPT_API_KEY}';</script>", unsafe_allow_html=True)
+
         # JavaScript-based handwriting canvas
         st.write("📝 Draw your math expression below:")
         st.markdown(
@@ -81,7 +84,7 @@ if student_id:
 
                 function convertToLatex() {
                     let requestData = {
-                        "applicationKey": "%s",
+                        "applicationKey": MYSCRIPT_API_KEY,
                         "strokes": strokes
                     };
 
@@ -105,7 +108,7 @@ if student_id:
                     alert("✅ LaTeX copied to clipboard!");
                 }
             </script>
-            """ % MYSCRIPT_API_KEY,
+            """,
             unsafe_allow_html=True
         )
 
