@@ -31,7 +31,7 @@ def log_usage(student_id):
     except FileNotFoundError:
         df = pd.DataFrame(columns=["Student ID", "Timestamp"])
 
-    df = df.append({"Student ID": student_id, "Timestamp": timestamp}, ignore_index=True)
+    df = pd.concat({"Student ID": student_id, "Timestamp": timestamp}, ignore_index=True)
     df.to_csv(log_file, index=False)
 
 # Function to send email with usage log
