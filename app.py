@@ -1,8 +1,13 @@
 import streamlit as st
 import pandas as pd
+import requests
+import json
 import os
 import hashlib
 from datetime import datetime
+
+# Load MyScript API Key from Streamlit Secrets
+MYSCRIPT_API_KEY = st.secrets["MYSCRIPT_API_KEY"]
 
 # CSV file for logging usage
 log_file = "usage_log.csv"
@@ -40,41 +45,67 @@ if student_id:
         st.success("✅ ID Verified! You can now write your math expression.")
         log_usage(student_id)
 
-        # MyScript Handwriting Input (WITHOUT the extra Copy Button)
-        st.write("Write your math equation below:")
-
+        # JavaScript-based handwriting canvas
+        st.write("📝 Draw your math expression below:")
         st.markdown(
             """
-            <iframe id="myscriptFrame" src="https://webdemo.myscript.com/views/math/index.html"
-            width="100%" height="400" style="border: none;"></iframe>
-            
+            <canvas id="canvas" width="500" height="200" style="border:1px solid black;"></canvas>
             <br>
-            <label>Converted LaTeX Output:</label>
+            <button onclick="clearCanvas()" style="padding: 8px 12px;">🗑 Clear</button>
+            <button onclick="convertToLatex()" style="padding: 8px 12px;">📄 Convert to LaTeX</button>
+            <br><br>
             <input type="text" id="latexOutput" readonly style="width: 100%; padding: 5px; font-size: 16px;">
             <br>
-            <button onclick="copyLatex()" style="padding: 8px 12px; font-size: 16px;">📋 Copy LaTeX</button>
+            <button onclick="copyLatex()" style="padding: 8px 12px;">📋 Copy LaTeX</button>
 
             <script>
+                let canvas = document.getElementById("canvas");
+                let ctx = canvas.getContext("2d");
+                let drawing = false;
+                let strokes = [];
+
+                canvas.addEventListener("mousedown", () => { drawing = true; strokes.push([]); });
+                canvas.addEventListener("mouseup", () => { drawing = false; });
+                canvas.addEventListener("mousemove", (e) => {
+                    if (!drawing) return;
+                    let x = e.offsetX;
+                    let y = e.offsetY;
+                    ctx.fillRect(x, y, 2, 2);
+                    strokes[strokes.length - 1].push({ x, y });
+                });
+
+                function clearCanvas() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    strokes = [];
+                }
+
+                function convertToLatex() {
+                    let requestData = {
+                        "applicationKey": "%s",
+                        "strokes": strokes
+                    };
+
+                    fetch("https://cloud.myscript.com/api/v4.0/iink/batch", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(requestData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        let latex = data["results"][0]["latex"];
+                        document.getElementById("latexOutput").value = latex;
+                    })
+                    .catch(error => alert("Error converting: " + error));
+                }
+
                 function copyLatex() {
-                    var iframe = document.getElementById("myscriptFrame").contentWindow;
-                    var latexField = document.getElementById("latexOutput");
-
-                    // Extract LaTeX from iframe
-                    iframe.postMessage({ type: 'EXPORT', mimeType: 'application/x-latex' }, '*');
-
-                    window.addEventListener('message', function(event) {
-                        if (event.data.type === 'EXPORT' && event.data.mimeType === 'application/x-latex') {
-                            latexField.value = event.data.data;
-                        }
-                    });
-
-                    // Copy to clipboard
+                    let latexField = document.getElementById("latexOutput");
                     latexField.select();
                     document.execCommand("copy");
-                    alert("LaTeX copied to clipboard!");
+                    alert("✅ LaTeX copied to clipboard!");
                 }
             </script>
-            """,
+            """ % MYSCRIPT_API_KEY,
             unsafe_allow_html=True
         )
 
@@ -85,4 +116,4 @@ if student_id:
             check_digit = generate_check_digit(student_id, latex_string)
             final_latex = f"{latex_string}  % {check_digit}"  # Hidden label for checksum
             st.code(final_latex, language="latex")
-            st.success("✅ LaTeX copied to clipboard!")
+            st.success("✅ LaTeX with checksum copied to clipboard!")
