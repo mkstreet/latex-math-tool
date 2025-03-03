@@ -45,9 +45,9 @@ if student_id:
         st.success("✅ ID Verified! You can now write your math expression.")
         log_usage(student_id)
 
-        # JavaScript-based handwriting canvas (Fixed)
+        # JavaScript-based handwriting canvas (Fixed with Escaped Braces)
         st.markdown(
-            f"""
+            """
             <canvas id="canvas" width="500" height="200" style="border:1px solid black;"></canvas>
             <br>
             <button onclick="clearCanvas()" style="padding: 8px 12px;">🗑 Clear</button>
@@ -63,59 +63,59 @@ if student_id:
                 let drawing = false;
                 let strokes = [];
 
-                canvas.addEventListener("mousedown", (e) => {
+                canvas.addEventListener("mousedown", (e) => {{
                     drawing = true;
                     strokes.push([]);
-                });
+                }});
 
-                canvas.addEventListener("mousemove", (e) => {
+                canvas.addEventListener("mousemove", (e) => {{
                     if (!drawing) return;
                     let x = e.offsetX;
                     let y = e.offsetY;
                     ctx.lineTo(x, y);
                     ctx.stroke();
-                    strokes[strokes.length - 1].push({x, y});
-                });
+                    strokes[strokes.length - 1].push({{x, y}});
+                }});
 
-                canvas.addEventListener("mouseup", () => { drawing = false; });
+                canvas.addEventListener("mouseup", () => {{ drawing = false; }});
 
-                function clearCanvas() {
+                function clearCanvas() {{
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.beginPath();
                     strokes = [];
-                }
+                }}
 
-                function convertToLatex() {
-                    let requestData = {
-                        "applicationKey": "{MYSCRIPT_API_KEY}",
+                function convertToLatex() {{
+                    let requestData = {{
+                        "applicationKey": "{api_key}",
                         "strokes": strokes
-                    };
+                    }};
 
-                    fetch("https://cloud.myscript.com/api/v4.0/iink/batch", {
+                    fetch("https://cloud.myscript.com/api/v4.0/iink/batch", {{
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: {{ "Content-Type": "application/json" }},
                         body: JSON.stringify(requestData)
-                    })
+                    }})
                     .then(response => response.json())
-                    .then(data => {
-                        if (data["results"] && data["results"].length > 0) {
+                    .then(data => {{
+                        if (data["results"] && data["results"].length > 0) {{
                             let latex = data["results"][0]["latex"];
                             document.getElementById("latexOutput").value = latex;
-                        } else {
+                        }} else {{
                             alert("❌ Conversion failed. Try again.");
-                        }
-                    })
+                        }}
+                    }})
                     .catch(error => alert("Error converting: " + error));
-                }
+                }}
 
-                function copyLatex() {
+                function copyLatex() {{
                     let latexField = document.getElementById("latexOutput");
                     latexField.select();
                     document.execCommand("copy");
                     alert("✅ LaTeX copied to clipboard!");
-                }
+                }}
             </script>
-            """,
+            """.format(api_key=MYSCRIPT_API_KEY),
             unsafe_allow_html=True
         )
 
